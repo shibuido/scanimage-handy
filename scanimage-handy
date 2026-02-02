@@ -77,7 +77,7 @@ def select_device_interactive(devices, default_device):
     return None
 
 def scan(basename, file_format, date_option, sane_device, mode, resolution,
-         verbose, icc_profile, output_file, progress, all_options,
+         verbose, quiet, icc_profile, output_file, progress, all_options,
          extra_args, retries=3, delay=1, source='Flatbed'):
     """
     Perform a single scan using scanimage (non-batch mode).
@@ -101,8 +101,8 @@ def scan(basename, file_format, date_option, sane_device, mode, resolution,
     if all_options:
         cmd.append('--all-options')
         cmd.extend(extra_args)
-        if verbose:
-            print(f"INFO: Running command: {' '.join(cmd)}", file=sys.stderr)
+        if not quiet:
+            print(f"EXEC: {' '.join(cmd)}", file=sys.stderr)
         scanimage_result = subprocess.run(cmd)
         return None
 
@@ -120,9 +120,6 @@ def scan(basename, file_format, date_option, sane_device, mode, resolution,
 
     # Add --output-file to the command
     cmd.extend(['--output-file', filename])
-
-    if verbose:
-        print(f"INFO: Running command: {' '.join(cmd)}", file=sys.stderr)
 
     # If the file already exists and we didn't explicitly name it with -o, keep making new names
     while not output_file and os.path.exists(filename):
@@ -143,6 +140,8 @@ def scan(basename, file_format, date_option, sane_device, mode, resolution,
     # Try scanning, with optional retries if scanimage fails
     attempt = 0
     while attempt <= retries:
+        if not quiet:
+            print(f"EXEC: {' '.join(cmd)}", file=sys.stderr)
         scanimage_result = subprocess.run(cmd)
         if scanimage_result.returncode == 0:
             print(filename)
@@ -173,6 +172,8 @@ def main():
                         help='Date position in filename')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Enable verbose output')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='Suppress EXEC and HINT messages')
     parser.add_argument('-d', '--device-name', default=None,
                         help='SANE device to use (use `scanimage -L` to find one), '
                              'if not provided, env. $SCANIMAGE_DEVICE is used')
@@ -224,12 +225,13 @@ def main():
         if selected:
             args.device_name = selected
             # Print hints about setting the scanner via environment variable
-            script_name = os.path.basename(sys.argv[0])
-            print(f'HINT: You can use env var, e.g. `SCANIMAGE_DEVICE="{selected}" {script_name}`',
-                  file=sys.stderr)
-            print(f'HINT: Set default scanner in ~/.bashrc or ~/.zshrc: '
-                  f'export SCANIMAGE_DEVICE="{selected}"',
-                  file=sys.stderr)
+            if not args.quiet:
+                script_name = os.path.basename(sys.argv[0])
+                print(f'HINT: You can use env var, e.g. `SCANIMAGE_DEVICE="{selected}" {script_name}`',
+                      file=sys.stderr)
+                print(f'HINT: Set default scanner in ~/.bashrc or ~/.zshrc: '
+                      f'export SCANIMAGE_DEVICE="{selected}"',
+                      file=sys.stderr)
         else:
             sys.exit(1)
 
@@ -334,8 +336,8 @@ def main():
         # Extra arguments
         batch_cmd.extend(args.extra_args)
 
-        if args.verbose:
-            print(f"INFO: Running command: {' '.join(batch_cmd)}", file=sys.stderr)
+        if not args.quiet:
+            print(f"EXEC: {' '.join(batch_cmd)}", file=sys.stderr)
 
         # Run the batch scanning
         ret = subprocess.run(batch_cmd)
@@ -379,6 +381,7 @@ def main():
         mode=args.mode,
         resolution=args.resolution,
         verbose=args.verbose,
+        quiet=args.quiet,
         icc_profile=args.icc_profile,
         output_file=args.output_file,
         progress=args.progress,
