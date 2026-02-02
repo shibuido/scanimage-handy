@@ -223,6 +223,13 @@ def main():
         selected = select_device_interactive(devices, default_device)
         if selected:
             args.device_name = selected
+            # Print hints about setting the scanner via environment variable
+            script_name = os.path.basename(sys.argv[0])
+            print(f'HINT: You can use env var, e.g. `SCANIMAGE_DEVICE="{selected}" {script_name}`',
+                  file=sys.stderr)
+            print(f'HINT: Set default scanner in ~/.bashrc or ~/.zshrc: '
+                  f'export SCANIMAGE_DEVICE="{selected}"',
+                  file=sys.stderr)
         else:
             sys.exit(1)
 
